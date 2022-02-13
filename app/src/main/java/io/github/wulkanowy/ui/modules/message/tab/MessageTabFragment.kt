@@ -3,11 +3,11 @@ package io.github.wulkanowy.ui.modules.message.tab
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
-import android.view.View.GONE
-import android.view.View.INVISIBLE
-import android.view.View.VISIBLE
+import android.view.View.*
 import android.widget.CompoundButton
+import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,6 +52,30 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
 
     override var onlyWithAttachments = false
 
+    private var actionMode: ActionMode? = null
+
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            val inflater = mode.menuInflater
+            inflater.inflate(R.menu.context_menu_message_tab, menu)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            mode.title = "Delete"
+            return presenter.onPrepareActionMode()
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            presenter.onDestroyActionMode()
+            actionMode = null
+        }
+
+        override fun onActionItemClicked(mode: ActionMode, menu: MenuItem): Boolean {
+            return true
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
@@ -71,6 +95,9 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
     override fun initView() {
         with(tabAdapter) {
             onItemClickListener = presenter::onMessageItemSelected
+            onLongItemClickListener = {
+                actionMode = (activity as MainActivity?)?.startSupportActionMode(actionModeCallback)
+            }
             onHeaderClickListener = ::onChipChecked
             onChangesDetectedListener = ::resetListPosition
         }
@@ -84,9 +111,7 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
             messageTabSwipe.setOnRefreshListener(presenter::onSwipeRefresh)
             messageTabSwipe.setColorSchemeColors(requireContext().getThemeAttrColor(R.attr.colorPrimary))
             messageTabSwipe.setProgressBackgroundColorSchemeColor(
-                requireContext().getThemeAttrColor(
-                    R.attr.colorSwipeRefresh
-                )
+                requireContext().getThemeAttrColor(R.attr.colorSwipeRefresh)
             )
             messageTabErrorRetry.setOnClickListener { presenter.onRetry() }
             messageTabErrorDetails.setOnClickListener { presenter.onDetailsClick() }
@@ -146,6 +171,17 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         binding.messageTabSwipe.isRefreshing = show
     }
 
+    override fun notifyParentShowNewMessage(show: Boolean) {
+        (parentFragment as? MessageFragment)?.onChildFragmentShowNewMessage(show)
+    }
+
+    override fun showSelectCheckboxes(show: Boolean) {
+        with(tabAdapter) {
+            excuseActionMode = show
+            notifyDataSetChanged()
+        }
+    }
+
     override fun openMessage(message: Message) {
         (activity as? MainActivity)?.pushView(MessagePreviewFragment.newInstance(message))
     }
@@ -162,6 +198,10 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         presenter.onParentViewLoadData(forceRefresh, onlyUnread, onlyWithAttachments)
     }
 
+    fun onParentFinishActionMode() {
+        presenter.onParentFinishActionMode()
+    }
+
     private fun onChipChecked(chip: CompoundButton, isChecked: Boolean) {
         when (chip.id) {
             R.id.chip_unread -> presenter.onUnreadFilterSelected(isChecked)
@@ -169,8 +209,8 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         }
     }
 
-    fun onParentDeleteMessage() {
-        presenter.onDeleteMessage()
+    override fun finishActionMode() {
+        actionMode?.finish()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

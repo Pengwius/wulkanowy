@@ -14,12 +14,7 @@ import io.github.wulkanowy.utils.flowWithResourceIn
 import io.github.wulkanowy.utils.toFormattedString
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import timber.log.Timber
@@ -69,10 +64,6 @@ class MessageTabPresenter @Inject constructor(
         view?.showErrorDetailsDialog(lastError)
     }
 
-    fun onDeleteMessage() {
-        view?.run { loadData(true, onlyUnread == true, onlyWithAttachments) }
-    }
-
     fun onParentViewLoadData(
         forceRefresh: Boolean,
         onlyUnread: Boolean? = view?.onlyUnread,
@@ -81,9 +72,33 @@ class MessageTabPresenter @Inject constructor(
         loadData(forceRefresh, onlyUnread == true, onlyWithAttachments)
     }
 
+    fun onParentFinishActionMode() {
+        view?.finishActionMode()
+    }
+
+    fun onDestroyActionMode() {
+        view?.run {
+            enableSwipe(true)
+            showSelectCheckboxes(false)
+            notifyParentShowNewMessage(true)
+        }
+    }
+
+    fun onPrepareActionMode(): Boolean {
+        view?.apply {
+            showSelectCheckboxes(true)
+            enableSwipe(false)
+            notifyParentShowNewMessage(false)
+        }
+        return true
+    }
+
     fun onMessageItemSelected(message: Message, position: Int) {
         Timber.i("Select message ${message.id} item (position: $position)")
-        view?.openMessage(message)
+        view?.run {
+            finishActionMode()
+            openMessage(message)
+        }
     }
 
     fun onUnreadFilterSelected(isChecked: Boolean) {
@@ -266,8 +281,8 @@ class MessageTabPresenter @Inject constructor(
 
 
         return (subjectRatio.toDouble().pow(2)
-            + senderOrRecipientRatio.toDouble().pow(2)
-            + dateRatio.toDouble().pow(2) * 2
-            ).toInt()
+                + senderOrRecipientRatio.toDouble().pow(2)
+                + dateRatio.toDouble().pow(2) * 2
+                ).toInt()
     }
 }

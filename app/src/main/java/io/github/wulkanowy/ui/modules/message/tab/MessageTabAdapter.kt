@@ -22,7 +22,12 @@ class MessageTabAdapter @Inject constructor() :
 
     enum class ViewType { HEADER, ITEM }
 
+    var excuseActionMode = false
+
     var onItemClickListener: (Message, position: Int) -> Unit = { _, _ -> }
+
+    var onLongItemClickListener: () -> Unit = {}
+
     var onHeaderClickListener: (chip: CompoundButton, isChecked: Boolean) -> Unit = { _, _ -> }
 
     var onChangesDetectedListener = {}
@@ -75,13 +80,17 @@ class MessageTabAdapter @Inject constructor() :
                     val style = if (item.unread) Typeface.BOLD else Typeface.NORMAL
 
                     messageItemAuthor.run {
-                        text =
-                            if (item.folderId == MessageFolder.SENT.id) item.recipient else item.sender
+                        text = if (item.folderId == MessageFolder.SENT.id) {
+                            item.recipient
+                        } else {
+                            item.sender
+                        }
                         setTypeface(null, style)
                     }
                     messageItemSubject.run {
-                        text =
-                            if (item.subject.isNotBlank()) item.subject else context.getString(R.string.message_no_subject)
+                        text = item.subject.ifBlank {
+                            context.getString(R.string.message_no_subject)
+                        }
                         setTypeface(null, style)
                     }
                     messageItemDate.run {
@@ -96,6 +105,13 @@ class MessageTabAdapter @Inject constructor() :
                             if (it != NO_POSITION) onItemClickListener(item, it)
                         }
                     }
+
+                    root.setOnLongClickListener {
+                        onLongItemClickListener()
+                        return@setOnLongClickListener true
+                    }
+
+                    messageItemCheckbox.isVisible = excuseActionMode
                 }
             }
             is HeaderViewHolder -> {

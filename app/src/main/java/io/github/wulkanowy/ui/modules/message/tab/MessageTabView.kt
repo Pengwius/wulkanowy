@@ -27,6 +27,8 @@ interface MessageTabView : BaseView {
 
     fun showErrorView(show: Boolean)
 
+    fun notifyParentShowNewMessage(show: Boolean)
+
     fun setErrorDetails(message: String)
 
     fun showRefresh(show: Boolean)
@@ -34,4 +36,8 @@ interface MessageTabView : BaseView {
     fun openMessage(message: Message)
 
     fun notifyParentDataLoaded()
+
+    fun finishActionMode()
+
+    fun showSelectCheckboxes(show: Boolean)
 }
