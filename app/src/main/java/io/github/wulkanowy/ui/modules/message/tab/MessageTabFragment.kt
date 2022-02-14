@@ -9,6 +9,7 @@ import android.view.View.*
 import android.widget.CompoundButton
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.SearchView
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.wulkanowy.R
@@ -48,10 +49,6 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
 
     override val isViewEmpty
         get() = messageTabAdapter.itemCount == 0
-
-    override var onlyUnread: Boolean? = false
-
-    override var onlyWithAttachments = false
 
     private var actionMode: ActionMode? = null
 
@@ -109,7 +106,9 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
             layoutManager = LinearLayoutManager(context)
             adapter = messageTabAdapter
             addItemDecoration(DividerItemDecoration(context, false))
+            (itemAnimator as DefaultItemAnimator).supportsChangeAnimations = false
         }
+
         with(binding) {
             messageTabSwipe.setOnRefreshListener(presenter::onSwipeRefresh)
             messageTabSwipe.setColorSchemeColors(requireContext().getThemeAttrColor(R.attr.colorPrimary))
@@ -137,9 +136,8 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         })
     }
 
-    override fun updateData(data: List<MessageTabDataItem>, hide: Boolean) {
-        if (hide) onlyUnread = null
-        messageTabAdapter.setDataItems(data, onlyUnread, onlyWithAttachments)
+    override fun updateData(data: List<MessageTabDataItem>) {
+        messageTabAdapter.submitData(data)
     }
 
     override fun updateActionModeTitle(selectedMessagesSize: Int) {
@@ -187,10 +185,7 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
     }
 
     override fun showSelectCheckboxes(show: Boolean) {
-        with(messageTabAdapter) {
-            isActionMode = show
-            notifyDataSetChanged()
-        }
+
     }
 
     override fun openMessage(message: Message) {
@@ -201,12 +196,8 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         (parentFragment as? MessageFragment)?.onChildFragmentLoaded()
     }
 
-    fun onParentLoadData(
-        forceRefresh: Boolean,
-        onlyUnread: Boolean? = this.onlyUnread,
-        onlyWithAttachments: Boolean = this.onlyWithAttachments
-    ) {
-        presenter.onParentViewLoadData(forceRefresh, onlyUnread, onlyWithAttachments)
+    fun onParentLoadData(forceRefresh: Boolean) {
+        presenter.onParentViewLoadData(forceRefresh)
     }
 
     fun onParentFinishActionMode() {

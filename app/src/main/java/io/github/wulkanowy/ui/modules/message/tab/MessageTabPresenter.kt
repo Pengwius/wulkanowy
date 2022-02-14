@@ -41,6 +41,12 @@ class MessageTabPresenter @Inject constructor(
 
     private val messagesToDelete = mutableListOf<Message>()
 
+    private var onlyUnread: Boolean? = false
+
+    private var onlyWithAttachments = false
+
+    private var isActionMode = false
+
     fun onAttachView(view: MessageTabView, folder: MessageFolder) {
         super.onAttachView(view)
         view.initView()
@@ -51,7 +57,7 @@ class MessageTabPresenter @Inject constructor(
 
     fun onSwipeRefresh() {
         Timber.i("Force refreshing the $folder message")
-        view?.run { onParentViewLoadData(true, onlyUnread, onlyWithAttachments) }
+        view?.run { loadData(true, onlyUnread == true, onlyWithAttachments) }
     }
 
     fun onRetry() {
@@ -80,11 +86,7 @@ class MessageTabPresenter @Inject constructor(
         view?.updateActionModeTitle(messagesToDelete.size)
     }
 
-    fun onParentViewLoadData(
-        forceRefresh: Boolean,
-        onlyUnread: Boolean? = view?.onlyUnread,
-        onlyWithAttachments: Boolean = view?.onlyWithAttachments == true
-    ) {
+    fun onParentViewLoadData(forceRefresh: Boolean) {
         loadData(forceRefresh, onlyUnread == true, onlyWithAttachments)
     }
 
@@ -93,6 +95,10 @@ class MessageTabPresenter @Inject constructor(
     }
 
     fun onDestroyActionMode() {
+        isActionMode = false
+        messagesToDelete.clear()
+        updateDataInView(messages)
+
         view?.run {
             enableSwipe(true)
             showSelectCheckboxes(false)
@@ -101,7 +107,10 @@ class MessageTabPresenter @Inject constructor(
     }
 
     fun onPrepareActionMode(): Boolean {
+        isActionMode = true
         messagesToDelete.clear()
+        updateDataInView(messages)
+
         view?.apply {
             showSelectCheckboxes(true)
             enableSwipe(false)
@@ -146,14 +155,14 @@ class MessageTabPresenter @Inject constructor(
     fun onUnreadFilterSelected(isChecked: Boolean) {
         view?.run {
             onlyUnread = isChecked
-            onParentViewLoadData(false, onlyUnread, onlyWithAttachments)
+            loadData(false, onlyUnread == true, onlyWithAttachments)
         }
     }
 
     fun onAttachmentsFilterSelected(isChecked: Boolean) {
         view?.run {
             onlyWithAttachments = isChecked
-            onParentViewLoadData(false, onlyUnread, onlyWithAttachments)
+            loadData(false, onlyUnread == true, onlyWithAttachments)
         }
     }
 
@@ -178,27 +187,38 @@ class MessageTabPresenter @Inject constructor(
                             showRefresh(true)
                             showProgress(false)
                             showContent(true)
-                            messages = it.data
-                            val filteredData = getFilteredData(
-                                lastSearchQuery,
-                                onlyUnread,
-                                onlyWithAttachments
-                            )
-                            val messageItems = filteredData.map { message ->
-                                MessageTabDataItem.MessageItem(message)
-                            }
-                            val messageItemsWithHeader =
-                                listOf(MessageTabDataItem.Header) + messageItems
-
-                            updateData(messageItemsWithHeader, folder.id == MessageFolder.SENT.id)
-                            notifyParentDataLoaded()
                         }
+
+                        messages = it.data
+
+                        val filteredData = getFilteredData(
+                            query = lastSearchQuery,
+                            onlyUnread = onlyUnread,
+                            onlyWithAttachments = onlyWithAttachments
+                        )
+                        updateDataInView(filteredData)
+
+                        view?.notifyParentDataLoaded()
                     }
                 }
                 Status.SUCCESS -> {
                     Timber.i("Loading $folder message result: Success")
                     messages = it.data!!
-                    updateData(getFilteredData(lastSearchQuery, onlyUnread, onlyWithAttachments))
+
+                    view?.run {
+                        showEmpty(it.data.isEmpty())
+                        showContent(true)
+                        showErrorView(false)
+                    }
+
+                    updateDataInView(
+                        getFilteredData(
+                            lastSearchQuery,
+                            onlyUnread,
+                            onlyWithAttachments
+                        )
+                    )
+
                     analytics.logEvent(
                         "load_data",
                         "type" to "messages",
@@ -249,14 +269,23 @@ class MessageTabPresenter @Inject constructor(
                 .debounce(250)
                 .map { query ->
                     lastSearchQuery = query
-                    val isOnlyUnread = view?.onlyUnread == true
-                    val isOnlyWithAttachments = view?.onlyWithAttachments == true
+
+                    val isOnlyUnread = onlyUnread == true
+                    val isOnlyWithAttachments = onlyWithAttachments
+
                     getFilteredData(query, isOnlyUnread, isOnlyWithAttachments)
                 }
                 .catch { Timber.e(it) }
                 .collect {
                     Timber.d("Applying filter. Full list: ${messages.size}, filtered: ${it.size}")
-                    updateData(it)
+
+                    view?.run {
+                        showEmpty(it.isEmpty())
+                        showContent(true)
+                        showErrorView(false)
+                    }
+
+                    updateDataInView(it)
                     view?.resetListPosition()
                 }
         }
@@ -290,15 +319,27 @@ class MessageTabPresenter @Inject constructor(
         }
     }
 
-    private fun updateData(data: List<Message>) {
-        view?.run {
-            showEmpty(data.isEmpty())
-            showContent(true)
-            showErrorView(false)
-            val newItems =
-                listOf(MessageTabDataItem.Header) + data.map { MessageTabDataItem.MessageItem(it) }
-            updateData(newItems, folder.id == MessageFolder.SENT.id)
+    private fun updateDataInView(data: List<Message>) {
+        val list = buildList {
+            if (!isActionMode) {
+                add(
+                    MessageTabDataItem.FilterHeader(
+                        onlyUnread = onlyUnread.takeIf { folder != MessageFolder.SENT },
+                        onlyWithAttachments = onlyWithAttachments
+                    )
+                )
+            }
+
+            addAll(data.map {
+                MessageTabDataItem.MessageItem(
+                    message = it,
+                    isSelected = false,
+                    isActionMode = isActionMode
+                )
+            })
         }
+
+        view?.updateData(list)
     }
 
     private fun calculateMatchRatio(message: Message, query: String): Int {

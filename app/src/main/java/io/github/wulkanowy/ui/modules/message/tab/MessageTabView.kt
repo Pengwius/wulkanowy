@@ -7,15 +7,11 @@ interface MessageTabView : BaseView {
 
     val isViewEmpty: Boolean
 
-    var onlyUnread: Boolean?
-
-    var onlyWithAttachments: Boolean
-
     fun initView()
 
     fun resetListPosition()
 
-    fun updateData(data: List<MessageTabDataItem>, hide: Boolean)
+    fun updateData(data: List<MessageTabDataItem>)
 
     fun updateActionModeTitle(selectedMessagesSize: Int)
 

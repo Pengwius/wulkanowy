@@ -2,15 +2,18 @@ package io.github.wulkanowy.ui.modules.message.tab
 
 import io.github.wulkanowy.data.db.entities.Message
 
-sealed class MessageTabDataItem {
+sealed class MessageTabDataItem(val viewType: MessageItemViewType) {
 
-    data class MessageItem(val message: Message) : MessageTabDataItem() {
-        override val id = message.id
-    }
+    data class MessageItem(
+        val message: Message,
+        val isSelected: Boolean,
+        val isActionMode: Boolean
+    ) : MessageTabDataItem(MessageItemViewType.MESSAGE)
 
-    object Header : MessageTabDataItem() {
-        override val id = Long.MIN_VALUE
-    }
-
-    abstract val id: Long
+    data class FilterHeader(
+        val onlyUnread: Boolean?,
+        val onlyWithAttachments: Boolean
+    ) : MessageTabDataItem(MessageItemViewType.FILTERS)
 }
+
+enum class MessageItemViewType { FILTERS, MESSAGE }

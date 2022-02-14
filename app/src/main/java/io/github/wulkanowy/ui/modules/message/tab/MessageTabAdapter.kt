@@ -13,19 +13,10 @@ import io.github.wulkanowy.data.enums.MessageFolder
 import io.github.wulkanowy.databinding.ItemMessageBinding
 import io.github.wulkanowy.databinding.ItemMessageChipsBinding
 import io.github.wulkanowy.utils.toFormattedString
-import java.util.*
 import javax.inject.Inject
 
 class MessageTabAdapter @Inject constructor() :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    enum class ViewType { HEADER, ITEM }
-
-    var isActionMode = false
-        set(value) {
-            checkedPosition.clear()
-            field = value
-        }
 
     var onItemClickListener: (Message, position: Int) -> Unit = { _, _ -> }
 
@@ -39,123 +30,96 @@ class MessageTabAdapter @Inject constructor() :
 
     private var items = mutableListOf<MessageTabDataItem>()
 
-    private var onlyUnread: Boolean? = null
-
-    private var onlyWithAttachments = false
-
-    private val checkedPosition = BitSet()
-
-    fun setDataItems(
-        data: List<MessageTabDataItem>,
-        onlyUnread: Boolean?,
-        onlyWithAttachments: Boolean
-    ) {
+    fun submitData(data: List<MessageTabDataItem>) {
         if (items.size != data.size) onChangesDetectedListener()
-
-        checkedPosition.clear()
 
         val diffResult = DiffUtil.calculateDiff(MessageTabDiffUtil(items, data))
         items = data.toMutableList()
 
-        this.onlyUnread = onlyUnread
-        this.onlyWithAttachments = onlyWithAttachments
-
         diffResult.dispatchUpdatesTo(this)
     }
 
-    override fun getItemViewType(position: Int) = if (position == 0) {
-        ViewType.HEADER.ordinal
-    } else {
-        ViewType.ITEM.ordinal
-    }
+    override fun getItemViewType(position: Int) = items[position].viewType.ordinal
 
     override fun getItemCount() = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return when (viewType) {
-            ViewType.ITEM.ordinal -> ItemViewHolder(
+
+        return when (MessageItemViewType.values()[viewType]) {
+            MessageItemViewType.MESSAGE -> ItemViewHolder(
                 ItemMessageBinding.inflate(inflater, parent, false)
             )
-            ViewType.HEADER.ordinal -> HeaderViewHolder(
+            MessageItemViewType.FILTERS -> HeaderViewHolder(
                 ItemMessageChipsBinding.inflate(inflater, parent, false)
             )
-            else -> throw IllegalStateException()
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is ItemViewHolder -> bindItemViewHolder(holder, position)
-            is HeaderViewHolder -> bindHeaderViewHolder(holder)
+            is HeaderViewHolder -> bindHeaderViewHolder(holder, position)
         }
     }
 
-    private fun bindHeaderViewHolder(holder: HeaderViewHolder) {
+    private fun bindHeaderViewHolder(holder: HeaderViewHolder, position: Int) {
+        val item = items[position] as MessageTabDataItem.FilterHeader
+
         with(holder.binding) {
-            if (onlyUnread == null) {
+            if (item.onlyUnread == null) {
                 chipUnread.isVisible = false
             } else {
                 chipUnread.isVisible = true
-                chipUnread.isChecked = onlyUnread!!
+                chipUnread.isChecked = item.onlyUnread
                 chipUnread.setOnCheckedChangeListener(onHeaderClickListener)
             }
-            chipAttachments.isChecked = onlyWithAttachments
+            chipAttachments.isChecked = item.onlyWithAttachments
             chipAttachments.setOnCheckedChangeListener(onHeaderClickListener)
-            messageChipGroup.isVisible = !isActionMode
         }
     }
 
     private fun bindItemViewHolder(holder: ItemViewHolder, position: Int) {
-        val item = (items[position] as MessageTabDataItem.MessageItem).message
+        val item = (items[position] as MessageTabDataItem.MessageItem)
+        val message = item.message
 
         with(holder.binding) {
-            val style = if (item.unread) Typeface.BOLD else Typeface.NORMAL
+            val style = if (message.unread) Typeface.BOLD else Typeface.NORMAL
 
             messageItemAuthor.run {
-                text = if (item.folderId == MessageFolder.SENT.id) {
-                    item.recipient
+                text = if (message.folderId == MessageFolder.SENT.id) {
+                    message.recipient
                 } else {
-                    item.sender
+                    message.sender
                 }
                 setTypeface(null, style)
             }
             messageItemSubject.run {
-                text = item.subject.ifBlank { context.getString(R.string.message_no_subject) }
+                text = message.subject.ifBlank { context.getString(R.string.message_no_subject) }
                 setTypeface(null, style)
             }
             messageItemDate.run {
-                text = item.date.toFormattedString()
+                text = message.date.toFormattedString()
                 setTypeface(null, style)
             }
-            messageItemAttachmentIcon.isVisible = item.hasAttachments
+            messageItemAttachmentIcon.isVisible = message.hasAttachments
 
             root.setOnClickListener {
                 holder.bindingAdapterPosition.let {
-                    if (it != RecyclerView.NO_POSITION && !isActionMode) {
-                        onItemClickListener(item, it)
-                    } else if (isActionMode) {
-                        messageItemCheckbox.isChecked = !checkedPosition[position]
+                    if (it != RecyclerView.NO_POSITION) {
+                        onItemClickListener(message, it)
                     }
                 }
             }
 
             root.setOnLongClickListener {
-                if (!isActionMode) {
-                    onLongItemClickListener()
-                    messageItemCheckbox.isChecked = true
-                }
+                onLongItemClickListener()
                 return@setOnLongClickListener true
             }
 
             with(messageItemCheckbox) {
-                isChecked = checkedPosition[position]
-                isVisible = isActionMode
-
-                setOnCheckedChangeListener { _, checked ->
-                    onCheckboxSelect(item, checked)
-                    checkedPosition[position] = checked
-                }
+                isChecked = item.isSelected
+                isVisible = item.isActionMode
             }
         }
     }
@@ -175,11 +139,17 @@ class MessageTabAdapter @Inject constructor() :
         override fun getNewListSize(): Int = new.size
 
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return old[oldItemPosition].id == new[newItemPosition].id
+            val oldItem = old[oldItemPosition]
+            val newItem = new[newItemPosition]
+
+            return if (oldItem is MessageTabDataItem.MessageItem && newItem is MessageTabDataItem.MessageItem) {
+                oldItem.message.id == newItem.message.id
+            } else {
+                oldItem.viewType == newItem.viewType
+            }
         }
 
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return old[oldItemPosition] == new[newItemPosition]
-        }
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
+            old[oldItemPosition] == new[newItemPosition]
     }
 }
