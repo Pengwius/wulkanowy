@@ -7,11 +7,7 @@ import io.github.wulkanowy.data.Resource
 import io.github.wulkanowy.data.db.SharedPrefProvider
 import io.github.wulkanowy.data.db.dao.MessageAttachmentDao
 import io.github.wulkanowy.data.db.dao.MessagesDao
-import io.github.wulkanowy.data.db.entities.Message
-import io.github.wulkanowy.data.db.entities.MessageWithAttachment
-import io.github.wulkanowy.data.db.entities.Recipient
-import io.github.wulkanowy.data.db.entities.Semester
-import io.github.wulkanowy.data.db.entities.Student
+import io.github.wulkanowy.data.db.entities.*
 import io.github.wulkanowy.data.enums.MessageFolder
 import io.github.wulkanowy.data.enums.MessageFolder.RECEIVED
 import io.github.wulkanowy.data.mappers.mapFromEntities
@@ -20,11 +16,7 @@ import io.github.wulkanowy.data.pojos.MessageDraft
 import io.github.wulkanowy.sdk.Sdk
 import io.github.wulkanowy.sdk.pojo.Folder
 import io.github.wulkanowy.sdk.pojo.SentMessage
-import io.github.wulkanowy.utils.AutoRefreshHelper
-import io.github.wulkanowy.utils.getRefreshKey
-import io.github.wulkanowy.utils.init
-import io.github.wulkanowy.utils.networkBoundResource
-import io.github.wulkanowy.utils.uniqueSubtract
+import io.github.wulkanowy.utils.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.decodeFromString
@@ -153,19 +145,26 @@ class MessageRepository @Inject constructor(
         recipients = recipients.mapFromEntities()
     )
 
-    suspend fun deleteMessage(student: Student, message: Message) {
-        val isDeleted = sdk.init(student).deleteMessages(
-            messages = listOf(message.messageId), message.folderId
-        )
+    suspend fun deleteMessages(student: Student, messages: List<Message>) {
+        val folderId = messages.first().folderId
+        val isDeleted = sdk.init(student)
+            .deleteMessages(messages = messages.map { it.messageId }, folderId = folderId)
 
-        if (message.folderId != MessageFolder.TRASHED.id && isDeleted) {
-            val deletedMessage = message.copy(folderId = MessageFolder.TRASHED.id).apply {
-                id = message.id
-                content = message.content
+        if (folderId != MessageFolder.TRASHED.id && isDeleted) {
+            val deletedMessages = messages.map {
+                it.copy(folderId = MessageFolder.TRASHED.id)
+                    .apply {
+                        id = it.id
+                        content = it.content
+                    }
             }
-            messagesDb.updateAll(listOf(deletedMessage))
-        } else messagesDb.deleteAll(listOf(message))
+
+            messagesDb.updateAll(deletedMessages)
+        } else messagesDb.deleteAll(messages)
     }
+
+    suspend fun deleteMessage(student: Student, message: Message) =
+        deleteMessages(student, listOf(message))
 
     var draftMessage: MessageDraft?
         get() = sharedPrefProvider.getString(context.getString(R.string.pref_key_message_send_draft))

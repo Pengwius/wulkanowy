@@ -31,9 +31,10 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
     lateinit var presenter: MessageTabPresenter
 
     @Inject
-    lateinit var tabAdapter: MessageTabAdapter
+    lateinit var messageTabAdapter: MessageTabAdapter
 
     companion object {
+
         const val MESSAGE_TAB_FOLDER_ID = "message_tab_folder_id"
 
         fun newInstance(folder: MessageFolder): MessageTabFragment {
@@ -46,7 +47,7 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
     }
 
     override val isViewEmpty
-        get() = tabAdapter.itemCount == 0
+        get() = messageTabAdapter.itemCount == 0
 
     override var onlyUnread: Boolean? = false
 
@@ -62,7 +63,7 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         }
 
         override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.title = "Delete"
+            updateActionModeTitle(1)
             return presenter.onPrepareActionMode()
         }
 
@@ -72,6 +73,9 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         }
 
         override fun onActionItemClicked(mode: ActionMode, menu: MenuItem): Boolean {
+            if (menu.itemId == R.id.messageTabContextMenuDelete) {
+                presenter.onActionModeSelectDelete()
+            }
             return true
         }
     }
@@ -93,18 +97,17 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
     }
 
     override fun initView() {
-        with(tabAdapter) {
+        with(messageTabAdapter) {
             onItemClickListener = presenter::onMessageItemSelected
-            onLongItemClickListener = {
-                actionMode = (activity as MainActivity?)?.startSupportActionMode(actionModeCallback)
-            }
+            onLongItemClickListener = presenter::onMessageItemLongSelected
             onHeaderClickListener = ::onChipChecked
             onChangesDetectedListener = ::resetListPosition
+            onCheckboxSelect = presenter::onExcuseCheckboxSelect
         }
 
         with(binding.messageTabRecycler) {
             layoutManager = LinearLayoutManager(context)
-            adapter = tabAdapter
+            adapter = messageTabAdapter
             addItemDecoration(DividerItemDecoration(context, false))
         }
         with(binding) {
@@ -136,7 +139,15 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
 
     override fun updateData(data: List<MessageTabDataItem>, hide: Boolean) {
         if (hide) onlyUnread = null
-        tabAdapter.setDataItems(data, onlyUnread, onlyWithAttachments)
+        messageTabAdapter.setDataItems(data, onlyUnread, onlyWithAttachments)
+    }
+
+    override fun updateActionModeTitle(selectedMessagesSize: Int) {
+        actionMode?.title = resources.getQuantityString(
+            R.plurals.message_selected_messages_count,
+            selectedMessagesSize,
+            selectedMessagesSize
+        )
     }
 
     override fun showProgress(show: Boolean) {
@@ -176,8 +187,8 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
     }
 
     override fun showSelectCheckboxes(show: Boolean) {
-        with(tabAdapter) {
-            excuseActionMode = show
+        with(messageTabAdapter) {
+            isActionMode = show
             notifyDataSetChanged()
         }
     }
@@ -209,8 +220,12 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         }
     }
 
-    override fun finishActionMode() {
-        actionMode?.finish()
+    override fun showActionMode(show: Boolean) {
+        if (show) {
+            actionMode = (activity as MainActivity?)?.startSupportActionMode(actionModeCallback)
+        } else {
+            actionMode?.finish()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

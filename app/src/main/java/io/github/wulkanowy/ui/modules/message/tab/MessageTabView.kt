@@ -17,6 +17,8 @@ interface MessageTabView : BaseView {
 
     fun updateData(data: List<MessageTabDataItem>, hide: Boolean)
 
+    fun updateActionModeTitle(selectedMessagesSize: Int)
+
     fun showProgress(show: Boolean)
 
     fun enableSwipe(enable: Boolean)
@@ -37,7 +39,7 @@ interface MessageTabView : BaseView {
 
     fun notifyParentDataLoaded()
 
-    fun finishActionMode()
+    fun showActionMode(show: Boolean)
 
     fun showSelectCheckboxes(show: Boolean)
 }

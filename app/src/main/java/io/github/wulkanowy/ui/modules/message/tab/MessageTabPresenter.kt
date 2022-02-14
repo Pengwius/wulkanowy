@@ -39,6 +39,8 @@ class MessageTabPresenter @Inject constructor(
 
     private val searchChannel = Channel<String>()
 
+    private val messagesToDelete = mutableListOf<Message>()
+
     fun onAttachView(view: MessageTabView, folder: MessageFolder) {
         super.onAttachView(view)
         view.initView()
@@ -64,6 +66,20 @@ class MessageTabPresenter @Inject constructor(
         view?.showErrorDetailsDialog(lastError)
     }
 
+    fun onExcuseCheckboxSelect(messageItem: Message, checked: Boolean) {
+        if (checked) {
+            messagesToDelete.add(messageItem)
+        } else {
+            messagesToDelete.remove(messageItem)
+        }
+
+        if (messagesToDelete.isEmpty()) {
+            view?.showActionMode(false)
+        }
+
+        view?.updateActionModeTitle(messagesToDelete.size)
+    }
+
     fun onParentViewLoadData(
         forceRefresh: Boolean,
         onlyUnread: Boolean? = view?.onlyUnread,
@@ -73,7 +89,7 @@ class MessageTabPresenter @Inject constructor(
     }
 
     fun onParentFinishActionMode() {
-        view?.finishActionMode()
+        view?.showActionMode(false)
     }
 
     fun onDestroyActionMode() {
@@ -85,6 +101,7 @@ class MessageTabPresenter @Inject constructor(
     }
 
     fun onPrepareActionMode(): Boolean {
+        messagesToDelete.clear()
         view?.apply {
             showSelectCheckboxes(true)
             enableSwipe(false)
@@ -93,10 +110,35 @@ class MessageTabPresenter @Inject constructor(
         return true
     }
 
+    fun onActionModeSelectDelete() {
+        Timber.i("Delete ${messagesToDelete.size} messages)")
+        val messageList = messagesToDelete.toList()
+
+        presenterScope.launch {
+            view?.showProgress(true)
+            view?.showContent(false)
+            view?.showActionMode(false)
+
+            runCatching {
+                val student = studentRepository.getCurrentStudent(true)
+                messageRepository.deleteMessages(student, messageList)
+            }
+                .onFailure(errorHandler::dispatch)
+                .onSuccess { view?.showMessage("Usnięto") }
+
+            view?.showProgress(false)
+            view?.showContent(true)
+        }
+    }
+
+    fun onMessageItemLongSelected() {
+        view?.showActionMode(true)
+    }
+
     fun onMessageItemSelected(message: Message, position: Int) {
         Timber.i("Select message ${message.id} item (position: $position)")
         view?.run {
-            finishActionMode()
+            showActionMode(false)
             openMessage(message)
         }
     }
