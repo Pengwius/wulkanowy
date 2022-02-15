@@ -107,7 +107,7 @@
     <string name="grade_statistics_legend">Legenda</string>
     <string name="grade_statistics_class_average">Średnia klasy: %1$s</string>
     <string name="grade_statistics_student_average">Twoja średnia: %1$s</string>
-    <string name="grade_statistics_student_grade">Your grade: %1$s</string>
+    <string name="grade_statistics_student_grade">Twoja ocena: %1$s</string>
     <string name="grade_statistics_average_class">Klasa</string>
     <string name="grade_statistics_average_student">Uczeń</string>
     <plurals name="grade_number_item">
