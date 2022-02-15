@@ -105,8 +105,8 @@
     <string name="grade_statistics_semester">Semestr</string>
     <string name="grade_statistics_points">Body</string>
     <string name="grade_statistics_legend">Vysvětlivky</string>
-    <string name="grade_statistics_class_average">Class average: %1$s</string>
-    <string name="grade_statistics_student_average">Your average: %1$s</string>
+    <string name="grade_statistics_class_average">Průměr třídy: %1$s</string>
+    <string name="grade_statistics_student_average">Váš průměr: %1$s</string>
     <string name="grade_statistics_student_grade">Your grade: %1$s</string>
     <string name="grade_statistics_average_class">Třída</string>
     <string name="grade_statistics_average_student">Žák</string>
