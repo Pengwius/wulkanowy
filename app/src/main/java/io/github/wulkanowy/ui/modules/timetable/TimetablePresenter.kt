@@ -1,6 +1,5 @@
 package io.github.wulkanowy.ui.modules.timetable
 
-import android.annotation.SuppressLint
 import io.github.wulkanowy.data.Status
 import io.github.wulkanowy.data.db.entities.Timetable
 import io.github.wulkanowy.data.enums.TimetableMode
@@ -10,24 +9,13 @@ import io.github.wulkanowy.data.repositories.StudentRepository
 import io.github.wulkanowy.data.repositories.TimetableRepository
 import io.github.wulkanowy.ui.base.BasePresenter
 import io.github.wulkanowy.ui.base.ErrorHandler
-import io.github.wulkanowy.utils.AnalyticsHelper
-import io.github.wulkanowy.utils.afterLoading
-import io.github.wulkanowy.utils.capitalise
-import io.github.wulkanowy.utils.flowWithResourceIn
-import io.github.wulkanowy.utils.getLastSchoolDayIfHoliday
-import io.github.wulkanowy.utils.isHolidays
-import io.github.wulkanowy.utils.nextOrSameSchoolDay
-import io.github.wulkanowy.utils.nextSchoolDay
-import io.github.wulkanowy.utils.previousSchoolDay
-import io.github.wulkanowy.utils.toFormattedString
+import io.github.wulkanowy.utils.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 import java.time.LocalDate
-import java.time.LocalDate.now
-import java.time.LocalDate.of
-import java.time.LocalDate.ofEpochDay
+import java.time.LocalDate.*
 import javax.inject.Inject
 
 class TimetablePresenter @Inject constructor(
@@ -190,16 +178,24 @@ class TimetablePresenter @Inject constructor(
 
     private fun updateData(lessons: List<Timetable>) {
         view?.updateData(
-            showWholeClassPlanType = prefRepository.showWholeClassPlan,
-            showGroupsInPlanType = prefRepository.showGroupsInPlan,
-            showTimetableTimers = prefRepository.showTimetableTimers,
+//            showWholeClassPlanType = prefRepository.showWholeClassPlan,
+//            showGroupsInPlanType = prefRepository.showGroupsInPlan,
+//            showTimetableTimers = prefRepository.showTimetableTimers,
             data = createItems(lessons)
         )
     }
 
-    private fun createItems(items: List<Timetable>) = items.filter { item ->
-        if (prefRepository.showWholeClassPlan == TimetableMode.ONLY_CURRENT_GROUP) item.isStudentPlan else true
-    }.sortedWith(compareBy({ item -> item.number }, { item -> !item.isStudentPlan }))
+    private fun createItems(items: List<Timetable>): List<TimetableItem> = items
+        .filter { item ->
+            if (prefRepository.showWholeClassPlan == TimetableMode.ONLY_CURRENT_GROUP) {
+                item.isStudentPlan
+            } else true
+        }.sortedWith(
+            compareBy({ item -> item.number }, { item -> !item.isStudentPlan })
+        ).map {
+            if (it.isStudentPlan) TimetableItem.Normal(it, ::onTimetableItemSelected)
+            else TimetableItem.Small(it, ::onTimetableItemSelected)
+        }
 
     private fun showErrorViewOnError(message: String, error: Throwable) {
         view?.run {
@@ -227,7 +223,6 @@ class TimetablePresenter @Inject constructor(
         }
     }
 
-    @SuppressLint("DefaultLocale")
     private fun reloadNavigation() {
         view?.apply {
             showPreButton(!currentDate.minusDays(1).isHolidays)
