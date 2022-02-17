@@ -105,9 +105,9 @@
     <string name="grade_statistics_semester">Семестрові</string>
     <string name="grade_statistics_points">Бали</string>
     <string name="grade_statistics_legend">Умовні позначення</string>
-    <string name="grade_statistics_class_average">Class average: %1$s</string>
-    <string name="grade_statistics_student_average">Your average: %1$s</string>
-    <string name="grade_statistics_student_grade">Your grade: %1$s</string>
+    <string name="grade_statistics_class_average">Середня классу: %1$s</string>
+    <string name="grade_statistics_student_average">Ваша середня: %1$s</string>
+    <string name="grade_statistics_student_grade">Ваша оцінка: %1$s</string>
     <string name="grade_statistics_average_class">Клас</string>
     <string name="grade_statistics_average_student">Учень</string>
     <plurals name="grade_number_item">
