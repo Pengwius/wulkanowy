@@ -139,7 +139,10 @@ class MessageTabPresenter @Inject constructor(
             updateDataInView(messages)
         }
 
-        view?.updateSelectAllMenu(!isAllSelected)
+        view?.run {
+            updateSelectAllMenu(!isAllSelected)
+            updateActionModeTitle(messagesToDelete.size)
+        }
     }
 
     fun onMessageItemLongSelected(messageItem: MessageTabDataItem.MessageItem) {
