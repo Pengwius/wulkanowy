@@ -279,6 +279,8 @@
     <string name="message_reply">Reply</string>
     <string name="message_forward">Forward</string>
     <string name="message_delete">Delete</string>
+    <string name="message_select_all">Select all</string>
+    <string name="message_unselect_all">Unselect all</string>
     <string name="message_move_to_bin">Move to trash</string>
     <string name="message_delete_forever">Delete permanently</string>
     <string name="message_delete_success">Message deleted successfully</string>
@@ -312,6 +314,7 @@
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
     </plurals>
+    <string name="message_messages_deleted">Messages deleted</string>
 
 
     <!--Note-->

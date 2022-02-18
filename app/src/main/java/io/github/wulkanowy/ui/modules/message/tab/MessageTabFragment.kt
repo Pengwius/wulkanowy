@@ -60,7 +60,10 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         }
 
         override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-            updateActionModeTitle(1)
+            if (presenter.folder == MessageFolder.TRASHED) {
+                val menuItem = menu.findItem(R.id.messageTabContextMenuDelete)
+                menuItem.setTitle(R.string.message_delete_forever)
+            }
             return presenter.onPrepareActionMode()
         }
 
@@ -70,8 +73,9 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         }
 
         override fun onActionItemClicked(mode: ActionMode, menu: MenuItem): Boolean {
-            if (menu.itemId == R.id.messageTabContextMenuDelete) {
-                presenter.onActionModeSelectDelete()
+            when (menu.itemId) {
+                R.id.messageTabContextMenuDelete -> presenter.onActionModeSelectDelete()
+                R.id.messageTabContextMenuSelectAll -> presenter.onActionModeSelectCheckAll()
             }
             return true
         }
@@ -99,7 +103,6 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
             onLongItemClickListener = presenter::onMessageItemLongSelected
             onHeaderClickListener = ::onChipChecked
             onChangesDetectedListener = ::resetListPosition
-            onCheckboxSelect = presenter::onExcuseCheckboxSelect
         }
 
         with(binding.messageTabRecycler) {
@@ -148,6 +151,18 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         )
     }
 
+    override fun updateSelectAllMenu(isAllSelected: Boolean) {
+        val menuItem = actionMode?.menu?.findItem(R.id.messageTabContextMenuSelectAll) ?: return
+
+        if (isAllSelected) {
+            menuItem.setTitle(R.string.message_unselect_all)
+            menuItem.setIcon(R.drawable.ic_message_unselect_all)
+        } else {
+            menuItem.setTitle(R.string.message_select_all)
+            menuItem.setIcon(R.drawable.ic_message_select_all)
+        }
+    }
+
     override fun showProgress(show: Boolean) {
         binding.messageTabProgress.visibility = if (show) VISIBLE else GONE
     }
@@ -180,12 +195,12 @@ class MessageTabFragment : BaseFragment<FragmentMessageTabBinding>(R.layout.frag
         binding.messageTabSwipe.isRefreshing = show
     }
 
-    override fun notifyParentShowNewMessage(show: Boolean) {
-        (parentFragment as? MessageFragment)?.onChildFragmentShowNewMessage(show)
+    override fun showMessagesDeleted() {
+        showMessage(getString(R.string.message_messages_deleted))
     }
 
-    override fun showSelectCheckboxes(show: Boolean) {
-
+    override fun notifyParentShowNewMessage(show: Boolean) {
+        (parentFragment as? MessageFragment)?.onChildFragmentShowNewMessage(show)
     }
 
     override fun openMessage(message: Message) {

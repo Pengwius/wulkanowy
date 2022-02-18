@@ -8,7 +8,6 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import io.github.wulkanowy.R
-import io.github.wulkanowy.data.db.entities.Message
 import io.github.wulkanowy.data.enums.MessageFolder
 import io.github.wulkanowy.databinding.ItemMessageBinding
 import io.github.wulkanowy.databinding.ItemMessageChipsBinding
@@ -18,11 +17,9 @@ import javax.inject.Inject
 class MessageTabAdapter @Inject constructor() :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    var onItemClickListener: (Message, position: Int) -> Unit = { _, _ -> }
+    var onItemClickListener: (MessageTabDataItem.MessageItem, position: Int) -> Unit = { _, _ -> }
 
-    var onLongItemClickListener: () -> Unit = {}
-
-    var onCheckboxSelect: (Message, Boolean) -> Unit = { _, _ -> }
+    var onLongItemClickListener: (MessageTabDataItem.MessageItem) -> Unit = {}
 
     var onHeaderClickListener: (CompoundButton, Boolean) -> Unit = { _, _ -> }
 
@@ -107,13 +104,13 @@ class MessageTabAdapter @Inject constructor() :
             root.setOnClickListener {
                 holder.bindingAdapterPosition.let {
                     if (it != RecyclerView.NO_POSITION) {
-                        onItemClickListener(message, it)
+                        onItemClickListener(item, it)
                     }
                 }
             }
 
             root.setOnLongClickListener {
-                onLongItemClickListener()
+                onLongItemClickListener(item)
                 return@setOnLongClickListener true
             }
 

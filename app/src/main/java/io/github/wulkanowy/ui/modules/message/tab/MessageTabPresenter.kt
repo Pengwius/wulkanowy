@@ -72,20 +72,6 @@ class MessageTabPresenter @Inject constructor(
         view?.showErrorDetailsDialog(lastError)
     }
 
-    fun onExcuseCheckboxSelect(messageItem: Message, checked: Boolean) {
-        if (checked) {
-            messagesToDelete.add(messageItem)
-        } else {
-            messagesToDelete.remove(messageItem)
-        }
-
-        if (messagesToDelete.isEmpty()) {
-            view?.showActionMode(false)
-        }
-
-        view?.updateActionModeTitle(messagesToDelete.size)
-    }
-
     fun onParentViewLoadData(forceRefresh: Boolean) {
         loadData(forceRefresh, onlyUnread == true, onlyWithAttachments)
     }
@@ -101,7 +87,6 @@ class MessageTabPresenter @Inject constructor(
 
         view?.run {
             enableSwipe(true)
-            showSelectCheckboxes(false)
             notifyParentShowNewMessage(true)
         }
     }
@@ -112,7 +97,6 @@ class MessageTabPresenter @Inject constructor(
         updateDataInView(messages)
 
         view?.apply {
-            showSelectCheckboxes(true)
             enableSwipe(false)
             notifyParentShowNewMessage(false)
         }
@@ -124,9 +108,11 @@ class MessageTabPresenter @Inject constructor(
         val messageList = messagesToDelete.toList()
 
         presenterScope.launch {
-            view?.showProgress(true)
-            view?.showContent(false)
-            view?.showActionMode(false)
+            view?.run {
+                showProgress(true)
+                showContent(false)
+                showActionMode(false)
+            }
 
             runCatching {
                 val student = studentRepository.getCurrentStudent(true)
@@ -135,20 +121,62 @@ class MessageTabPresenter @Inject constructor(
                 .onFailure(errorHandler::dispatch)
                 .onSuccess { view?.showMessage("Usnięto") }
 
-            view?.showProgress(false)
-            view?.showContent(true)
+            view?.run {
+                showProgress(false)
+                showContent(true)
+            }
         }
     }
 
-    fun onMessageItemLongSelected() {
-        view?.showActionMode(true)
+    fun onActionModeSelectCheckAll() {
+        val isAllSelected = messagesToDelete.containsAll(messages)
+
+        if (isAllSelected) {
+            messagesToDelete.clear()
+            view?.showActionMode(false)
+        } else {
+            messagesToDelete.addAll(messages)
+            updateDataInView(messages)
+        }
+
+        view?.updateSelectAllMenu(!isAllSelected)
     }
 
-    fun onMessageItemSelected(message: Message, position: Int) {
-        Timber.i("Select message ${message.id} item (position: $position)")
-        view?.run {
-            showActionMode(false)
-            openMessage(message)
+    fun onMessageItemLongSelected(messageItem: MessageTabDataItem.MessageItem) {
+        if (!isActionMode) {
+            view?.showActionMode(true)
+
+            messagesToDelete.add(messageItem.message)
+
+            view?.updateActionModeTitle(messagesToDelete.size)
+            updateDataInView(messages)
+        }
+    }
+
+    fun onMessageItemSelected(messageItem: MessageTabDataItem.MessageItem, position: Int) {
+        Timber.i("Select message ${messageItem.message.id} item (position: $position)")
+
+        if (!isActionMode) {
+            view?.run {
+                showActionMode(false)
+                openMessage(messageItem.message)
+            }
+        } else {
+            if (!messageItem.isSelected) {
+                messagesToDelete.add(messageItem.message)
+            } else {
+                messagesToDelete.remove(messageItem.message)
+            }
+
+            if (messagesToDelete.isEmpty()) {
+                view?.showActionMode(false)
+            }
+
+            view?.run {
+                updateActionModeTitle(messagesToDelete.size)
+                updateSelectAllMenu(messagesToDelete.containsAll(messages))
+            }
+            updateDataInView(messages)
         }
     }
 
@@ -330,10 +358,10 @@ class MessageTabPresenter @Inject constructor(
                 )
             }
 
-            addAll(data.map {
+            addAll(data.map { message ->
                 MessageTabDataItem.MessageItem(
-                    message = it,
-                    isSelected = false,
+                    message = message,
+                    isSelected = messagesToDelete.any { it.id == message.id },
                     isActionMode = isActionMode
                 )
             })

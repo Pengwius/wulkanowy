@@ -15,6 +15,8 @@ interface MessageTabView : BaseView {
 
     fun updateActionModeTitle(selectedMessagesSize: Int)
 
+    fun updateSelectAllMenu(isAllSelected: Boolean)
+
     fun showProgress(show: Boolean)
 
     fun enableSwipe(enable: Boolean)
@@ -22,6 +24,8 @@ interface MessageTabView : BaseView {
     fun showContent(show: Boolean)
 
     fun showEmpty(show: Boolean)
+
+    fun showMessagesDeleted()
 
     fun showErrorView(show: Boolean)
 
@@ -36,6 +40,4 @@ interface MessageTabView : BaseView {
     fun notifyParentDataLoaded()
 
     fun showActionMode(show: Boolean)
-
-    fun showSelectCheckboxes(show: Boolean)
 }
