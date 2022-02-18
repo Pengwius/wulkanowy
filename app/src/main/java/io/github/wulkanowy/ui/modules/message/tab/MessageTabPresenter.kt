@@ -119,7 +119,7 @@ class MessageTabPresenter @Inject constructor(
                 messageRepository.deleteMessages(student, messageList)
             }
                 .onFailure(errorHandler::dispatch)
-                .onSuccess { view?.showMessage("Usnięto") }
+                .onSuccess { view?.showMessagesDeleted() }
 
             view?.run {
                 showProgress(false)
