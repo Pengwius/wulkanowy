@@ -42,9 +42,9 @@ class TimetableAdapter @Inject constructor() :
     ) {
         if (payloads.isEmpty()) return super.onBindViewHolder(holder, position, payloads)
 
-        if (holder is NormalViewHolder) bindNormalView(
+        if (holder is NormalViewHolder) updateTimeLeft(
             binding = holder.binding,
-            item = getItem(position) as TimetableItem.Normal,
+            timeLeft = (getItem(position) as TimetableItem.Normal).timeLeft,
         )
     }
 
@@ -104,7 +104,7 @@ class TimetableAdapter @Inject constructor() :
         with(binding) {
             when {
                 // before lesson
-                timeLeft?.isShowTimeUntil == true -> {
+                timeLeft?.until != null -> {
                     timetableItemTimeLeft.visibility = GONE
                     with(timetableItemTimeUntil) {
                         visibility = VISIBLE
@@ -279,10 +279,10 @@ class TimetableAdapter @Inject constructor() :
             override fun areItemsTheSame(oldItem: TimetableItem, newItem: TimetableItem): Boolean =
                 when {
                     oldItem is TimetableItem.Small && newItem is TimetableItem.Small -> {
-                        oldItem.lesson.id == newItem.lesson.id
+                        oldItem.lesson.start == newItem.lesson.start
                     }
                     oldItem is TimetableItem.Normal && newItem is TimetableItem.Normal -> {
-                        oldItem.lesson.id == newItem.lesson.id
+                        oldItem.lesson.start == newItem.lesson.start
                     }
                     else -> oldItem == newItem
                 }

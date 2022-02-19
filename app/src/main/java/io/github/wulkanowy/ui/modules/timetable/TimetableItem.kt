@@ -19,8 +19,7 @@ sealed class TimetableItem(val type: TimetableItemType) {
 }
 
 data class TimeLeft(
-    val isShowTimeUntil: Boolean,
-    val until: Duration,
+    val until: Duration?,
     val left: Duration?,
     val isJustFinished: Boolean,
 )

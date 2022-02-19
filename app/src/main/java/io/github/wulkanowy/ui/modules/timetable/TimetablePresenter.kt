@@ -179,10 +179,10 @@ class TimetablePresenter @Inject constructor(
     private fun updateData(lessons: List<Timetable>) {
         tickTimer?.cancel()
 
-        view?.updateData(createItems(lessons))
-        if (prefRepository.showTimetableTimers) {
-            tickTimer = timer(initialDelay = 1_000, period = 1_000) {
-                Timber.d("Time left updated")
+        if (!prefRepository.showTimetableTimers) {
+            view?.updateData(createItems(lessons))
+        } else {
+            tickTimer = timer(period = 1_000) {
                 view?.updateData(createItems(lessons))
             }
         }
@@ -212,9 +212,9 @@ class TimetablePresenter @Inject constructor(
     }
 
     private fun List<Timetable>.getTimeLeftForLesson(lesson: Timetable, index: Int): TimeLeft {
+        val isShowTimeUntil = lesson.isShowTimeUntil(getPreviousLesson(index))
         return TimeLeft(
-            isShowTimeUntil = lesson.isShowTimeUntil(getPreviousLesson(index)),
-            until = lesson.until.plusMinutes(1),
+            until = lesson.until.plusMinutes(1).takeIf { isShowTimeUntil },
             left = lesson.left?.plusMinutes(1),
             isJustFinished = lesson.isJustFinished,
         )
