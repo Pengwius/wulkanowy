@@ -136,12 +136,12 @@ class TimetablePresenter @Inject constructor(
                 Status.LOADING -> {
                     if (!it.data?.lessons.isNullOrEmpty()) {
                         view?.run {
+                            updateData(it.data!!.lessons)
                             enableSwipe(true)
                             showRefresh(true)
                             showErrorView(false)
                             showProgress(false)
                             showContent(true)
-                            updateData(it.data!!.lessons)
                         }
                     }
                 }
@@ -182,7 +182,7 @@ class TimetablePresenter @Inject constructor(
         if (!prefRepository.showTimetableTimers) {
             view?.updateData(createItems(lessons))
         } else {
-            tickTimer = timer(period = 1_000) {
+            tickTimer = timer(period = 2_000) {
                 view?.updateData(createItems(lessons))
             }
         }
