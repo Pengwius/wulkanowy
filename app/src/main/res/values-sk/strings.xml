@@ -385,8 +385,8 @@
     </plurals>
     <!--Homework-->
     <string name="homework_no_items">Žiadne informácie o domácich úlohách</string>
-    <string name="homework_mark_as_done">Označiť ako hotové</string>
-    <string name="homework_mark_as_undone">Nevyrobené</string>
+    <string name="homework_mark_as_done">Vykonané</string>
+    <string name="homework_mark_as_undone">Nevykonané</string>
     <string name="homework_add">Pridať domácu úlohu</string>
     <string name="homework_add_success">Domáca úloha bola úspešně pridaná</string>
     <string name="homework_delete_success">Domáca úloha bola úspešně odstránená</string>
